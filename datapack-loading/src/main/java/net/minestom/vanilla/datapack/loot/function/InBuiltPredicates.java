@@ -4,8 +4,10 @@ import com.squareup.moshi.JsonReader;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.block.Block;
-import net.minestom.server.item.Enchantment;
-import net.minestom.server.item.ItemMeta;
+import net.minestom.server.item.ItemComponent;
+import net.minestom.server.item.ItemStack;
+import net.minestom.server.item.component.EnchantmentList;
+import net.minestom.server.item.enchant.Enchantment;
 import net.minestom.vanilla.datapack.DatapackLoader;
 import net.minestom.vanilla.datapack.json.JsonUtils;
 import net.minestom.vanilla.datapack.json.Optional;
@@ -84,8 +86,8 @@ interface InBuiltPredicates {
 
             static Property fromJson(JsonReader reader) throws IOException {
                 return JsonUtils.typeMapMapped(reader, Map.of(
-                        JsonReader.Token.STRING, (JsonUtils.IoFunction<JsonReader, Property>) json -> new Value(json.nextString()),
-                        JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(Range.class)
+                  JsonReader.Token.STRING, (JsonUtils.IoFunction<JsonReader, Property>) json -> new Value(json.nextString()),
+                  JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(Range.class)
                 ));
             }
 
@@ -171,8 +173,8 @@ interface InBuiltPredicates {
 
             static Score fromJson(JsonReader reader) throws IOException {
                 return JsonUtils.typeMapMapped(reader, Map.of(
-                        JsonReader.Token.NUMBER, DatapackLoader.moshi(Value.class),
-                        JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(Range.class)
+                  JsonReader.Token.NUMBER, DatapackLoader.moshi(Value.class),
+                  JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(Range.class)
                 ));
             }
 
@@ -298,8 +300,11 @@ interface InBuiltPredicates {
 
             Player player = context.get(LootContext.KILLER_PLAYER);
             if (player != null) {
-                ItemMeta meta = player.getItemInMainHand().meta();
-                looting = meta.getEnchantmentMap().getOrDefault(Enchantment.LOOTING, (short) 0);
+                ItemStack itemStack = player.getItemInMainHand();
+                EnchantmentList enchantmentList = itemStack.get(ItemComponent.ENCHANTMENTS);
+                if (enchantmentList != null) {
+                    looting = enchantmentList.level(Enchantment.LOOTING);
+                }
             }
 
             return random < chance + (looting * looting_multiplier);
@@ -353,8 +358,12 @@ interface InBuiltPredicates {
 
         @Override
         public boolean test(LootContext context) {
-            ItemMeta meta = context.getOrThrow(LootContext.TOOL).meta();
-            int level = meta.getEnchantmentMap().getOrDefault(enchantment, (short) 0);
+            ItemStack itemStack = context.getOrThrow(LootContext.TOOL);
+            EnchantmentList enchantmentList = itemStack.get(ItemComponent.ENCHANTMENTS);
+            int level = 0;
+            if (enchantmentList != null) {
+                level = enchantmentList.level(enchantment);
+            }
             return ThreadLocalRandom.current().nextFloat() < chances.get(level);
         }
     }
@@ -384,8 +393,8 @@ interface InBuiltPredicates {
 
             static Value fromJson(JsonReader reader) throws IOException {
                 return JsonUtils.typeMapMapped(reader, Map.of(
-                        JsonReader.Token.NUMBER, DatapackLoader.moshi(Single.class),
-                        JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(MinMax.class)
+                  JsonReader.Token.NUMBER, DatapackLoader.moshi(Single.class),
+                  JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(MinMax.class)
                 ));
             }
 
@@ -421,8 +430,8 @@ interface InBuiltPredicates {
         public sealed interface Range {
             static Range fromJson(JsonReader reader) throws IOException {
                 return JsonUtils.typeMapMapped(reader, Map.of(
-                        JsonReader.Token.NUMBER, DatapackLoader.moshi(Single.class),
-                        JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(MinMax.class)
+                  JsonReader.Token.NUMBER, DatapackLoader.moshi(Single.class),
+                  JsonReader.Token.BEGIN_OBJECT, DatapackLoader.moshi(MinMax.class)
                 ));
             }
 

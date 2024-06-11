@@ -6,10 +6,10 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.world.DimensionType;
 import net.minestom.vanilla.blocks.VanillaBlockBehaviour;
 import net.minestom.vanilla.blocks.VanillaBlocks;
-import net.minestom.vanilla.dimensions.VanillaDimensionTypes;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Optional;
@@ -29,11 +29,11 @@ public class EndPortalBlockBehaviour extends VanillaBlockBehaviour {
         Instance instance = touch.getInstance();
         Entity touching = touch.getTouching();
 
+        DynamicRegistry.Key<DimensionType> targetDimension = instance.getDimensionType() == DimensionType.THE_END ? DimensionType.OVERWORLD : DimensionType.THE_END;
 
-        DimensionType targetDimension = instance.getDimensionType() == VanillaDimensionTypes.END ? VanillaDimensionTypes.OVERWORLD : VanillaDimensionTypes.END;
         Optional<Instance> potentialTargetInstance = MinecraftServer.getInstanceManager().getInstances().stream()
-                .filter(in -> in.getDimensionType() == targetDimension)
-                .findFirst();
+          .filter(in -> in.getDimensionType() == targetDimension)
+          .findFirst();
 
         // TODO: event
         if (potentialTargetInstance.isPresent()) {
@@ -43,7 +43,7 @@ public class EndPortalBlockBehaviour extends VanillaBlockBehaviour {
             final int obsidianPlatformY = 48;
             final int obsidianPlatformZ = 0;
 
-            if (targetDimension == VanillaDimensionTypes.OVERWORLD) { // teleport to spawn point
+            if (targetDimension == DimensionType.OVERWORLD) { // teleport to spawn point
                 if (touching instanceof Player) {
                     spawnPoint = ((Player) touching).getRespawnPoint();
                 } else { // TODO: world spawnpoint
@@ -55,7 +55,7 @@ public class EndPortalBlockBehaviour extends VanillaBlockBehaviour {
                 spawnPoint = new Pos(obsidianPlatformX, yLevel, obsidianPlatformZ);
             }
 
-            if (targetDimension == VanillaDimensionTypes.END) {
+            if (targetDimension == DimensionType.THE_END) {
                 for (int x = -1; x <= 1; x++) {
                     for (int z = -1; z <= 1; z++) {
                         targetInstance.loadChunk(obsidianPlatformX / 16 + x, obsidianPlatformZ / 16 + z);

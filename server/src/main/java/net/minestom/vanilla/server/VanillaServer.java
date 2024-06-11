@@ -64,11 +64,8 @@ class VanillaServer {
 
 
         // Register all dimension types before making the worlds:
-        for (DimensionType dimension : VanillaDimensionTypes.values()) {
-            vri.process().dimension().addDimension(dimension);
-        }
 
-        this.overworld = vri.createInstance(NamespaceID.from("world"), VanillaDimensionTypes.OVERWORLD);
+        this.overworld = vri.createInstance(NamespaceID.from("world"), DimensionType.OVERWORLD);
 
         // Try to get server properties
 
@@ -84,10 +81,11 @@ class VanillaServer {
                     event.getPlayer().setGameMode(GameMode.SPECTATOR);
                     overworld.loadChunk(0, 0).join();
                     // TODO: Find the first block that is not air
-                    int y = overworld.getDimensionType().getMaxY();
+                    DimensionType dimensionType = vri.process().dimensionType().get(overworld.getDimensionType());
+                    int y = dimensionType.maxY();
                     while (Block.AIR.compare(overworld.getBlock(0, y, 0))) {
                         y--;
-                        if (y == overworld.getDimensionType().getMinY()) {
+                        if (y == dimensionType.minY()) {
                             break;
                         }
                     }

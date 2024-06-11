@@ -27,6 +27,7 @@ import net.minestom.server.network.packet.client.play.ClientPlayerPositionAndRot
 import net.minestom.server.network.packet.client.play.ClientPlayerPositionPacket;
 import net.minestom.server.network.packet.client.play.ClientPlayerRotationPacket;
 import net.minestom.server.utils.time.TimeUnit;
+import net.minestom.server.world.DimensionType;
 import net.minestom.vanilla.generation.VanillaTestGenerator;
 import net.minestom.vanilla.instance.VanillaExplosion;
 import net.minestom.vanilla.logging.Logger;
@@ -169,7 +170,8 @@ public class VanillaEvents {
 
                             player.getInstance().loadChunk(player.getPosition()).join();
 
-                            int y = player.getInstance().getDimensionType().getMaxY();
+                            DimensionType dimensionType = server.vri().process().dimensionType().get(player.getInstance().getDimensionType());
+                            int y = dimensionType.maxY();
                             while (player.getInstance().getBlock(1, y, 1).isAir()) {
                                 y--;
                             }

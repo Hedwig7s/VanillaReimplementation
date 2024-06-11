@@ -1,5 +1,6 @@
 package io.github.togar2.fluids;
 
+import net.minestom.server.coordinate.BlockVec;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
@@ -18,8 +19,8 @@ public class WaterFluid extends FlowableFluid {
     }
 
     @Override
-    protected boolean onBreakingBlock(Instance instance, Point point, Block block) {
-        WaterBlockBreakEvent event = new WaterBlockBreakEvent(instance, point, block);
+    protected boolean onBreakingBlock(Instance instance, BlockVec blockVec, Block block) {
+        WaterBlockBreakEvent event = new WaterBlockBreakEvent(instance, blockVec, block);
         return !event.isCancelled();
     }
 
@@ -39,7 +40,7 @@ public class WaterFluid extends FlowableFluid {
     }
 
     @Override
-    protected boolean canBeReplacedWith(Instance instance, Point point, Fluid other, Direction direction) {
+    protected boolean canBeReplacedWith(Instance instance, BlockVec blockVec, Fluid other, Direction direction) {
         return direction == Direction.DOWN && this == other;
     }
 

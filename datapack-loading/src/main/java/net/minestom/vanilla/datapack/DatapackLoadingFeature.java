@@ -19,7 +19,6 @@ public class DatapackLoadingFeature implements VanillaReimplementation.Feature {
 
     @Override
     public void hook(@NotNull HookContext context) {
-
         @NotNull MojangDataFeature data = context.vri().feature(MojangDataFeature.class);
 
         Loading.start("Parsing vanilla datapack");

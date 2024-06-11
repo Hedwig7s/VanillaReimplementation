@@ -8,13 +8,13 @@ import net.minestom.server.entity.Entity;
 import net.minestom.server.event.Event;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.world.DimensionType;
 import net.minestom.vanilla.blocks.VanillaBlockBehaviour;
 import net.minestom.vanilla.blocks.VanillaBlocks;
 import net.minestom.vanilla.blockupdatesystem.BlockUpdatable;
 import net.minestom.vanilla.blockupdatesystem.BlockUpdateInfo;
-import net.minestom.vanilla.dimensions.VanillaDimensionTypes;
 import net.minestom.vanilla.system.nether.EntityEnterNetherPortalEvent;
 import net.minestom.vanilla.system.nether.NetherPortalTeleportEvent;
 import net.minestom.vanilla.system.nether.NetherPortalUpdateEvent;
@@ -133,21 +133,21 @@ public class NetherPortalBlockBehaviour extends VanillaBlockBehaviour implements
     }
 
     private void attemptTeleport(Instance instance, Entity touching, Block block, long ticksSpentInPortal, NetherPortal portal) {
-        DimensionType targetDimension = VanillaDimensionTypes.NETHER;
+        DynamicRegistry.Key<DimensionType> targetDimension = DimensionType.THE_NETHER;
         Point position = touching.getPosition();
 
         double targetX = position.x() / 8;
         double targetY = position.y();
         double targetZ = position.z() / 8;
 
-        if (instance.getDimensionType() == VanillaDimensionTypes.NETHER) {
+        if (instance.getDimensionType() == DimensionType.THE_NETHER) {
             targetDimension = DimensionType.OVERWORLD;
             targetX = position.x() * 8;
             targetZ = position.z() * 8;
         }
 
         // TODO: event to change portal linking
-        final DimensionType finalTargetDimension = targetDimension;
+        final DynamicRegistry.Key<DimensionType> finalTargetDimension = targetDimension;
         Optional<Instance> potentialTargetInstance = MinecraftServer.getInstanceManager().getInstances().stream()
                 .filter(in -> in.getDimensionType() == finalTargetDimension)
                 .findFirst();

@@ -21,7 +21,7 @@ public class PrimedTNTEntity extends Entity {
 
     public PrimedTNTEntity(int fuseTime) {
         super(EntityType.TNT);
-        setGravity(0.025f, getGravityAcceleration());
+        // TODO is this right? setGravity(0.025f, getGravityAcceleration());
         setBoundingBox(0.98f, 0.98f, 0.98f);
         this.fuseTime = fuseTime;
 

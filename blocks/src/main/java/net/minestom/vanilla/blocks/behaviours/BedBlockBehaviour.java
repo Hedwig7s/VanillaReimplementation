@@ -72,7 +72,7 @@ public class BedBlockBehaviour extends VanillaBlockBehaviour {
         Point pos = interaction.getBlockPosition();
         Player player = interaction.getPlayer();
 
-        if (instance.getDimensionType().isBedSafe()) {
+        if (context.vri().process().dimensionType().get(instance.getDimensionType()).bedWorks()) {
             // TODO: make player sleep
             // TODO: checks for mobs
             // TODO: check for day
@@ -90,22 +90,22 @@ public class BedBlockBehaviour extends VanillaBlockBehaviour {
 
             // Schedule player getting out of bed
             MinecraftServer.getSchedulerManager().buildTask(() -> {
-                        if (!player.getPlayerConnection().isOnline()) {
-                            return;
-                        }
+                  if (!player.getPlayerConnection().isOnline()) {
+                      return;
+                  }
 
-                        meta.setBedInWhichSleepingPosition(null);
-                        meta.setPose(Entity.Pose.STANDING);
-                    })
-                    .delay(101, TimeUnit.SERVER_TICK)
-                    .schedule();
+                  meta.setBedInWhichSleepingPosition(null);
+                  meta.setPose(Entity.Pose.STANDING);
+              })
+              .delay(101, TimeUnit.SERVER_TICK)
+              .schedule();
             return true;
         }
 
         VanillaExplosion.builder(pos.add(0.5), 5)
-                .isFlaming(true)
-                .build()
-                .apply(instance);
+          .isFlaming(true)
+          .build()
+          .apply(instance);
         return true;
     }
 

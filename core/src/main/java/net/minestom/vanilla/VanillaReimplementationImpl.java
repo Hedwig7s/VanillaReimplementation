@@ -5,16 +5,16 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
-import net.minestom.server.instance.AnvilLoader;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.InstanceContainer;
 import net.minestom.server.instance.LightingChunk;
+import net.minestom.server.instance.anvil.AnvilLoader;
+import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.tag.TagHandler;
 import net.minestom.server.tag.TagWritable;
 import net.minestom.server.utils.NamespaceID;
 import net.minestom.server.world.DimensionType;
-import net.minestom.vanilla.dimensions.VanillaDimensionTypes;
 import net.minestom.vanilla.instance.SetupVanillaInstanceEvent;
 import net.minestom.vanilla.logging.Loading;
 import net.minestom.vanilla.logging.Logger;
@@ -166,8 +166,8 @@ class VanillaReimplementationImpl implements VanillaReimplementation {
     /**
      * Creates a vanilla instance.
      */
-    public @NotNull Instance createInstance(@NotNull NamespaceID name, @NotNull DimensionType dimension) {
-        InstanceContainer instance = process().instance().createInstanceContainer(dimension);
+    public @NotNull Instance createInstance(@NotNull NamespaceID name, @NotNull DynamicRegistry.Key<DimensionType> dimensionTypeKey) {
+        InstanceContainer instance = process().instance().createInstanceContainer(dimensionTypeKey);
         worlds.put(name, instance);
 
         // Anvil directory
@@ -203,17 +203,12 @@ class VanillaReimplementationImpl implements VanillaReimplementation {
         // Create the registry
         VanillaRegistry registry = new VanillaRegistryImpl();
 
-        // Hook this core library
-        Loading.start("Hooking Core Library");
-        hookCoreLibrary();
-        Loading.finish();
-
         // Load all the features and hook them
         Loading.start("Loading features from classpath");
         Set<Feature> features = ServiceLoader.load(Feature.class)
-                .stream()
-                .map(ServiceLoader.Provider::get)
-                .collect(Collectors.toUnmodifiableSet());
+          .stream()
+          .map(ServiceLoader.Provider::get)
+          .collect(Collectors.toUnmodifiableSet());
         Loading.finish();
 
         Loading.start("Validating dependencies");
@@ -264,11 +259,7 @@ class VanillaReimplementationImpl implements VanillaReimplementation {
     }
 
     private record HookContextImpl(VanillaReimplementation vri,
-                                       VanillaRegistry registry,
-                                       StatusUpdater status) implements Feature.HookContext {
-    }
-
-    private void hookCoreLibrary() {
-        VanillaDimensionTypes.registerAll(process().dimension());
+                                   VanillaRegistry registry,
+                                   StatusUpdater status) implements Feature.HookContext {
     }
 }

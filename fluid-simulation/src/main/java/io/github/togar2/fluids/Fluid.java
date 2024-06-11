@@ -1,5 +1,6 @@
 package io.github.togar2.fluids;
 
+import net.minestom.server.coordinate.BlockVec;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
@@ -24,12 +25,12 @@ public abstract class Fluid {
         return bucket;
     }
 
-    protected abstract boolean canBeReplacedWith(Instance instance, Point point,
+    protected abstract boolean canBeReplacedWith(Instance instance, BlockVec blockVec,
                                                  Fluid other, Direction direction);
 
-    public abstract int getNextTickDelay(Instance instance, Point point, Block block);
+    public abstract int getNextTickDelay(Instance instance, BlockVec blockVec, Block block);
 
-    public void onTick(Instance instance, Point point, Block block) {
+    public void onTick(Instance instance, BlockVec blockVec, Block block) {
     }
 
     protected boolean isEmpty() {
@@ -38,7 +39,7 @@ public abstract class Fluid {
 
     protected abstract double getBlastResistance();
 
-    public abstract double getHeight(Block block, Instance instance, Point point);
+    public abstract double getHeight(Block block, Instance instance, BlockVec blockVec);
 
     public abstract double getHeight(Block block);
 

@@ -5,6 +5,7 @@ import net.minestom.server.coordinate.Point;
 import net.minestom.server.entity.Entity;
 import net.minestom.server.entity.EntityType;
 import net.minestom.server.instance.Instance;
+import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.tag.TagWritable;
 import net.minestom.server.utils.NamespaceID;
 import net.minestom.server.world.DimensionType;
@@ -53,8 +54,9 @@ public interface VanillaReimplementation {
 
     /**
      * Acquires the given {@link Feature} from this reimplementation.
+     *
      * @param clazz the feature's class
-     * @param <T> the feature's type
+     * @param <T>   the feature's type
      * @return the feature
      */
     <T extends Feature> @NotNull T feature(Class<T> clazz);
@@ -102,7 +104,7 @@ public interface VanillaReimplementation {
     /**
      * Creates and registers a vanilla instance.
      */
-    @NotNull Instance createInstance(@NotNull NamespaceID namespace, @NotNull DimensionType dimension);
+    @NotNull Instance createInstance(@NotNull NamespaceID namespace, @NotNull DynamicRegistry.Key<DimensionType> dimensionTypeKey);
 
     /**
      * Gets a registered vanilla instance.
@@ -153,13 +155,16 @@ public interface VanillaReimplementation {
 
         interface HookContext {
             @NotNull VanillaReimplementation vri();
+
             @NotNull VanillaRegistry registry();
+
             @NotNull StatusUpdater status();
         }
 
         /**
          * Obtains the dependencies of this feature.
          * These dependencies will be loaded before this feature.
+         *
          * @return the dependencies
          */
         default @NotNull Set<Class<? extends Feature>> dependencies() {

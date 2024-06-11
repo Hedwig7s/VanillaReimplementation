@@ -3,6 +3,7 @@ package io.github.togar2.fluids;
 import it.unimi.dsi.fastutil.shorts.Short2BooleanMap;
 import it.unimi.dsi.fastutil.shorts.Short2BooleanOpenHashMap;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.coordinate.BlockVec;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.gamedata.tags.Tag;
 import net.minestom.server.gamedata.tags.TagManager;
@@ -22,7 +23,7 @@ public abstract class FlowableFluid extends Fluid {
     }
 
     @Override
-    public void onTick(Instance instance, Point point, Block block) {
+    public void onTick(Instance instance, BlockVec point, Block block) {
         if (!isSource(block)) {
             Block updated = getUpdatedState(instance, point, block);
             if (MinestomFluids.get(updated).isEmpty()) {
@@ -37,15 +38,15 @@ public abstract class FlowableFluid extends Fluid {
     }
 
     @Override
-    public int getNextTickDelay(Instance instance, Point point, Block block) {
+    public int getNextTickDelay(Instance instance, BlockVec point, Block block) {
         return getTickRate(instance);
     }
 
-    protected void tryFlow(Instance instance, Point point, Block block) {
+    protected void tryFlow(Instance instance, BlockVec point, Block block) {
         Fluid fluid = MinestomFluids.get(block);
         if (fluid.isEmpty()) return;
 
-        Point down = point.add(0, -1, 0);
+        BlockVec down = point.add(0, -1, 0);
         Block downBlock = instance.getBlock(down);
         Block updatedDownFluid = getUpdatedState(instance, down, downBlock);
         if (canFlow(instance, point, block, Direction.DOWN, down, downBlock, updatedDownFluid)) {
@@ -61,7 +62,7 @@ public abstract class FlowableFluid extends Fluid {
     /**
      * Flows to the sides whenever possible, or to a hole if found
      */
-    private void flowSides(Instance instance, Point point, Block block) {
+    private void flowSides(Instance instance, BlockVec point, Block block) {
         int newLevel = getLevel(block) - getLevelDecreasePerBlock(instance);
         if (isFalling(block)) newLevel = 7;
         if (newLevel <= 0) return;
@@ -70,7 +71,7 @@ public abstract class FlowableFluid extends Fluid {
         for (Map.Entry<Direction, Block> entry : map.entrySet()) {
             Direction direction = entry.getKey();
             Block newBlock = entry.getValue();
-            Point offset = point.add(direction.normalX(), direction.normalY(), direction.normalZ());
+            BlockVec offset = point.add(direction.normalX(), direction.normalY(), direction.normalZ());
             Block currentBlock = instance.getBlock(offset);
             if (!canFlow(instance, point, block, direction, offset, currentBlock, newBlock)) continue;
             flow(instance, offset, currentBlock, direction, newBlock);
@@ -277,7 +278,7 @@ public abstract class FlowableFluid extends Fluid {
     }
 
     protected boolean canFlow(Instance instance, Point fluidPoint, Block flowingBlock,
-                              Direction flowDirection, Point flowTo, Block flowToBlock, Block newFlowing) {
+                              Direction flowDirection, BlockVec flowTo, Block flowToBlock, Block newFlowing) {
         return MinestomFluids.get(flowToBlock).canBeReplacedWith(instance, flowTo, MinestomFluids.get(newFlowing), flowDirection)
                 && receivesFlow(flowDirection, instance, fluidPoint, flowingBlock, flowTo, flowToBlock)
                 && canFill(instance, flowTo, flowToBlock, newFlowing);
@@ -286,7 +287,7 @@ public abstract class FlowableFluid extends Fluid {
     /**
      * Sets the position to the new block, executing {@code onBreakingBlock()} before breaking any non-air block.
      */
-    protected void flow(Instance instance, Point point, Block block, Direction direction, Block newBlock) {
+    protected void flow(Instance instance, BlockVec point, Block block, Direction direction, Block newBlock) {
         //TODO waterloggable check
         boolean cancel = false;
         if (!block.isAir()) {
@@ -318,7 +319,7 @@ public abstract class FlowableFluid extends Fluid {
     /**
      * Returns whether the block can be broken
      */
-    protected abstract boolean onBreakingBlock(Instance instance, Point point, Block block);
+    protected abstract boolean onBreakingBlock(Instance instance, BlockVec point, Block block);
 
     public abstract int getTickRate(Instance instance);
 
@@ -327,7 +328,7 @@ public abstract class FlowableFluid extends Fluid {
     }
 
     @Override
-    public double getHeight(Block block, Instance instance, Point point) {
+    public double getHeight(Block block, Instance instance, BlockVec point) {
         return isFluidAboveEqual(block, instance, point) ? 1 : getHeight(block);
     }
 

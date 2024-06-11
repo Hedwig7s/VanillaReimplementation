@@ -1,17 +1,14 @@
 package net.minestom.vanilla.datapack.worldgen;
 
-import net.minestom.vanilla.files.ByteArray;
+import net.kyori.adventure.nbt.*;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
+import net.minestom.vanilla.files.ByteArray;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
-import org.jglrxavpok.hephaistos.nbt.*;
 
 import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -52,19 +49,19 @@ public record Structure(int DataVersion, @Nullable String author, Point size,
                         @Nullable Set<BlockState> palette, @UnknownNullability Set<Set<BlockState>> palettes,
                         List<Block> blocks, List<Entity> entities) {
     public static Structure fromInput(ByteArray content) {
-        try (NBTReader reader = new NBTReader(content.toStream())) {
+        try {
 
-            NBTCompound root = (NBTCompound) reader.read();
+            CompoundBinaryTag root = BinaryTagIO.reader().read(content.toStream());
             Objects.requireNonNull(root);
 
             int DataVersion = Objects.requireNonNull(root.getInt("DataVersion"));
             @Nullable String author = root.getString("author");
 
-            NBTList<NBTInt> nbt_size = Objects.requireNonNull(root.getList("size"));
-            NBTList<NBTCompound> nbt_palette = root.getList("palette");
-            NBTList<NBTList<NBTCompound>> nbt_palettes = root.getList("palettes");
-            NBTList<NBTCompound> nbt_blocks = Objects.requireNonNull(root.getList("blocks"));
-            NBTList<NBTCompound> nbt_entities = Objects.requireNonNull(root.getList("entities"));
+            ListBinaryTag nbt_size = Objects.requireNonNull(root.getList("size"));
+            ListBinaryTag nbt_palette = root.getList("palette");
+            ListBinaryTag nbt_palettes = root.getList("palettes");
+            ListBinaryTag nbt_blocks = Objects.requireNonNull(root.getList("blocks"));
+            ListBinaryTag nbt_entities = Objects.requireNonNull(root.getList("entities"));
 
             Point size = parsePoint(nbt_size);
             // Only one of "palette" OR "palettes" is present
@@ -74,71 +71,80 @@ public record Structure(int DataVersion, @Nullable String author, Point size,
             List<Entity> entities = parseEntities(nbt_entities);
 
             return new Structure(DataVersion, author, size, palette, palettes, blocks, entities);
-        } catch (IOException | NBTException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private static Point parsePoint(NBTList<NBTInt> nbtSize) {
-        return new Vec(nbtSize.get(0).getValue(), nbtSize.get(1).getValue(), nbtSize.get(2).getValue());
+    private static Point parsePoint(/* NBTList<NBTInt> */ ListBinaryTag nbtSize) {
+        return new Vec(nbtSize.getInt(0), nbtSize.getInt(1), nbtSize.getInt(2));
     }
 
-    private static Point parseDoublePoint(NBTList<NBTDouble> nbtSize) {
-        return new Vec(nbtSize.get(0).getValue(), nbtSize.get(1).getValue(), nbtSize.get(2).getValue());
+    private static Point parseDoublePoint(/* NBTList<NBTDouble> */ ListBinaryTag nbtSize) {
+        return new Vec(nbtSize.getDouble(0), nbtSize.getDouble(1), nbtSize.getDouble(2));
     }
 
-    private static BlockState parseBlockState(NBTCompound block) {
+    private static BlockState parseBlockState(CompoundBinaryTag block) {
         String blockId = Objects.requireNonNull(block.getString("Name"));
-        NBTCompound properties = block.getCompound("Properties");
-        if (properties == null) {
+        CompoundBinaryTag properties = block.getCompound("Properties");
+        if (properties.size() < 1) {
             return new BlockState(blockId, Map.of());
         }
+
+        Map<String, String> propertyMap = new HashMap<>();
+        for (Map.Entry<String, ? extends BinaryTag> property : properties) {
+            propertyMap.put(property.getKey(), ((StringBinaryTag) property.getValue()).value());
+        }
+
         return new BlockState(
-                blockId,
-                properties
-                        .asMapView().entrySet().stream()
-                        .map(entry -> Map.entry(entry.getKey(), (NBTString) entry.getValue()))
-                        .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getValue()))
+          blockId,
+          propertyMap
         );
     }
 
-    private static Set<BlockState> parsePalette(NBTList<NBTCompound> nbtPalette) {
-        return nbtPalette.asListView().stream()
-                .map(Structure::parseBlockState)
-                .collect(Collectors.toSet());
+    private static Set<BlockState> parsePalette(/* NBTList<NBTCompound> */ ListBinaryTag nbtPalette) {
+        return nbtPalette.stream()
+          .map(tag -> parseBlockState((CompoundBinaryTag) tag))
+          .collect(Collectors.toSet());
     }
 
-    private static Set<Set<BlockState>> parsePalettes(NBTList<NBTList<NBTCompound>> nbtPalettes) {
-        return nbtPalettes.asListView().stream()
-                .map(palette -> palette.asListView().stream()
-                        .map(Structure::parseBlockState)
-                        .collect(Collectors.toSet()))
-                .collect(Collectors.toSet());
+    private static Set<Set<BlockState>> parsePalettes(/* NBTList<NBTList<NBTCompound>> */ ListBinaryTag nbtPalettes) {
+        return nbtPalettes.stream()
+          .map(palette -> (((ListBinaryTag) palette)).stream()
+            .map(tag -> parseBlockState((CompoundBinaryTag) tag))
+            .collect(Collectors.toSet()))
+          .collect(Collectors.toSet());
     }
 
-    private static List<Block> parseBlocks(NBTList<NBTCompound> nbtBlocks) {
-        return nbtBlocks.asListView().stream()
-                .map(block -> new Block(
-                        Objects.requireNonNull(block.getInt("state")),
-                        parsePoint(Objects.requireNonNull(block.getList("pos"))),
-                        block.get("nbt")
-                ))
-                .collect(Collectors.toList());
+    private static List<Block> parseBlocks(/* NBTList<NBTCompound> */ ListBinaryTag nbtBlocks) {
+        return nbtBlocks.stream()
+          .map(tag -> {
+              CompoundBinaryTag block = (CompoundBinaryTag) tag;
+              return new Block(
+                block.getInt("state"),
+                parsePoint(Objects.requireNonNull(block.getList("pos"))),
+                block.get("nbt")
+              );
+          })
+          .collect(Collectors.toList());
     }
 
-    private static List<Entity> parseEntities(NBTList<NBTCompound> nbtEntities) {
-        return nbtEntities.asListView().stream()
-                .map(entity -> new Entity(
-                        parseDoublePoint(Objects.requireNonNull(entity.getList("pos"))),
-                        parsePoint(Objects.requireNonNull(entity.getList("blockPos"))),
-                        Objects.requireNonNull(entity.getCompound("nbt"))
-                ))
-                .collect(Collectors.toList());
+    private static List<Entity> parseEntities(/* NBTList<NBTCompound> */ ListBinaryTag nbtEntities) {
+        return nbtEntities.stream()
+          .map(tag -> {
+              CompoundBinaryTag entity = (CompoundBinaryTag) tag;
+              return new Entity(
+                parseDoublePoint(Objects.requireNonNull(entity.getList("pos"))),
+                parsePoint(Objects.requireNonNull(entity.getList("blockPos"))),
+                Objects.requireNonNull(entity.getCompound("nbt"))
+              );
+          })
+          .collect(Collectors.toList());
     }
 
-    public record Block(int state, Point pos, @Nullable NBT nbt) {
+    public record Block(int state, Point pos, @Nullable BinaryTag nbt) {
     }
 
-    public record Entity(Point pos, Point blockPos, NBT nbt) {
+    public record Entity(Point pos, Point blockPos, BinaryTag nbt) {
     }
 }

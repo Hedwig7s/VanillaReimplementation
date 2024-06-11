@@ -2,11 +2,12 @@ package net.minestom.vanilla.generation;
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
+import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.Chunk;
-import net.minestom.server.instance.ChunkGenerator;
-import net.minestom.server.instance.ChunkPopulator;
-import net.minestom.server.instance.batch.ChunkBatch;
 import net.minestom.server.instance.block.Block;
+import net.minestom.server.instance.generator.GenerationUnit;
+import net.minestom.server.instance.generator.Generator;
+import net.minestom.server.instance.generator.UnitModifier;
 import net.minestom.server.utils.NamespaceID;
 import net.minestom.server.utils.chunk.ChunkUtils;
 import net.minestom.server.world.DimensionType;
@@ -15,14 +16,12 @@ import net.minestom.vanilla.datapack.worldgen.NoiseSettings;
 import net.minestom.vanilla.datapack.worldgen.WorldgenContext;
 import net.minestom.vanilla.datapack.worldgen.biome.BiomeSource;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
-public class NoiseChunkGenerator implements ChunkGenerator {
+public class NoiseChunkGenerator implements Generator {
     private final Map<Long, NoiseChunk> noiseChunkCache = new HashMap<>();
     private final Aquifer.FluidPicker globalFluidPicker;
 
@@ -174,13 +173,20 @@ public class NoiseChunkGenerator implements ChunkGenerator {
     }
 
     @Override
-    public synchronized void generateChunkData(@NotNull ChunkBatch batch, int chunkX, int chunkZ) {
-        TargetChunkImpl chunk = new TargetChunkImpl(batch,
-                chunkX, chunkZ,
-                dimensionType.getMinY() / Chunk.CHUNK_SECTION_SIZE,
-                dimensionType.getMaxY() / Chunk.CHUNK_SECTION_SIZE);
-        RandomState randomState = new RandomState(settings, 125);
-        fill(this.datapack, randomState, chunk);
+    public void generate(@NotNull GenerationUnit unit) {
+        Point start = unit.absoluteStart();
+        Point end = unit.absoluteEnd();
+
+        for (int chunkX = start.chunkX(); chunkX < end.chunkX(); chunkX++) {
+            for (int chunkZ = start.chunkZ(); chunkZ < end.chunkZ(); chunkZ++) {
+                TargetChunkImpl chunk = new TargetChunkImpl(unit.modifier(),
+                  chunkX, chunkZ,
+                  dimensionType.minY() / Chunk.CHUNK_SECTION_SIZE,
+                  dimensionType.maxY() / Chunk.CHUNK_SECTION_SIZE);
+                RandomState randomState = new RandomState(settings, 125);
+                fill(this.datapack, randomState, chunk);
+            }
+        }
     }
 
     private static class TargetChunkImpl implements TargetChunk {
@@ -191,16 +197,16 @@ public class NoiseChunkGenerator implements ChunkGenerator {
         private final int minSection;
         private final int maxSection;
 
-        private final ChunkBatch batch;
+        private final UnitModifier modifier;
 
         private final Int2ObjectMap<Block> blocks = new Int2ObjectOpenHashMap<>();
 
-        public TargetChunkImpl(ChunkBatch batch, int chunkX, int chunkZ, int minSection, int maxSection) {
+        public TargetChunkImpl(UnitModifier modifier, int chunkX, int chunkZ, int minSection, int maxSection) {
             this.chunkX = chunkX;
             this.chunkZ = chunkZ;
             this.minSection = minSection;
             this.maxSection = maxSection;
-            this.batch = batch;
+            this.modifier = modifier;
         }
 
         @Override
@@ -236,7 +242,7 @@ public class NoiseChunkGenerator implements ChunkGenerator {
             }
             int index = ChunkUtils.getBlockIndex(x, y, z);
             this.blocks.put(index, block);
-            batch.setBlock(x - minX(), y, z - minZ(), block);
+            modifier.setBlock(x - minX(), y, z - minZ(), block);
         }
     }
 
@@ -276,10 +282,5 @@ public class NoiseChunkGenerator implements ChunkGenerator {
         default int maxY() {
             return (maxSection() + 1) * Chunk.CHUNK_SECTION_SIZE;
         }
-    }
-
-    @Override
-    public @Nullable List<ChunkPopulator> getPopulators() {
-        return null;
     }
 }

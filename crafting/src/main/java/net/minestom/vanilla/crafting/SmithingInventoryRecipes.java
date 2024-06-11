@@ -1,8 +1,11 @@
 package net.minestom.vanilla.crafting;
 
-import com.extollit.tuple.Pair;
 import dev.goldenstack.window.InventoryView;
 import dev.goldenstack.window.v1_20.Views.Smithing;
+import it.unimi.dsi.fastutil.Pair;
+import net.kyori.adventure.nbt.BinaryTag;
+import net.kyori.adventure.nbt.CompoundBinaryTag;
+import net.kyori.adventure.nbt.StringBinaryTag;
 import net.minestom.server.event.Event;
 import net.minestom.server.event.EventNode;
 import net.minestom.server.event.inventory.InventoryClickEvent;
@@ -20,21 +23,20 @@ import net.minestom.vanilla.datapack.recipe.Recipe;
 import net.minestom.vanilla.logging.Logger;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.jglrxavpok.hephaistos.nbt.NBT;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
 public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementation vri) {
 
-    static Tag<NBT> trimTag = Tag.NBT("Trim");
+    static Tag<BinaryTag> trimTag = Tag.NBT("Trim");
 
     public EventNode<Event> init() {
         EventNode<Event> node = EventNode.all("vri:smithing-inventory-recipes");
 
         var trims = getTrims();
-        trims.left.forEach(trimMaterial -> vri.process().trim().addTrimMaterial(trimMaterial));
-        trims.right.forEach(trimPattern -> vri.process().trim().addTrimPattern(trimPattern));
+        trims.left().forEach(trimMaterial -> vri.process().trimMaterial().register(trimMaterial));
+        trims.right().forEach(trimPattern -> vri.process().trimPattern().register(trimPattern));
 
         // TODO: shift-click mass crafting and take out.
 
@@ -54,9 +56,9 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
             }
 
             Recipe.Smithing recipe = getRecipe(
-                    Smithing.TEMPLATE.get(inv).material(),
-                    Smithing.BASE.get(inv).material(),
-                    Smithing.ADDITION.get(inv).material());
+              Smithing.TEMPLATE.get(inv).material(),
+              Smithing.BASE.get(inv).material(),
+              Smithing.ADDITION.get(inv).material());
 
             if (recipe == null) {
                 Smithing.OUTPUT.set(inv, ItemStack.AIR);
@@ -64,24 +66,23 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
             }
 
             if (recipe instanceof Recipe.SmithingTransform transform) {
-                Smithing.OUTPUT.set(inv,Smithing.BASE.get(inv).withMaterial(transform.result().item()));
-            }
-            else if (recipe instanceof Recipe.SmithingTrim trim) {
+                Smithing.OUTPUT.set(inv, Smithing.BASE.get(inv).withMaterial(transform.result().item()));
+            } else if (recipe instanceof Recipe.SmithingTrim trim) {
                 String trimPatternName = getTrimPatternFromTemplate(Smithing.TEMPLATE.get(inv).material());
                 String trimMaterialName = getTrimMaterialFromIngredient(Smithing.ADDITION.get(inv).material());
                 if (trimPatternName == null || trimMaterialName == null) {
                     Logger.warn("Can't find the trim data for %s while a recipe was found! why is this happening?".formatted(
-                            Smithing.TEMPLATE.get(inv).material().name()
+                      Smithing.TEMPLATE.get(inv).material().name()
                     ));
                     return;
                 }
                 Smithing.OUTPUT.set(inv, Smithing.BASE.get(inv).withTag(trimTag,
-                        NBT.Compound(Map.of(
-                                "material",
-                                    NBT.String(trimMaterialName),
-                                    "pattern",
-                                    NBT.String(trimPatternName)
-                        ))
+                  CompoundBinaryTag.from(Map.of(
+                    "material",
+                    StringBinaryTag.stringBinaryTag(trimMaterialName),
+                    "pattern",
+                    StringBinaryTag.stringBinaryTag(trimPatternName)
+                  ))
                 ));
             }
 
@@ -91,14 +92,23 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
     }
 
     private @Nullable String getTrimMaterialFromIngredient(Material material) {
-        TrimMaterial trimMaterial = vri.process().trim().fromIngredient(material);
+        TrimMaterial trimMaterial = vri.process().trimMaterial().values()
+          .stream()
+          .filter(inner -> inner.ingredient().equals(material))
+          .findFirst()
+          .orElse(null);
         if (trimMaterial == null) {
             return null;
         }
         return trimMaterial.name();
     }
+
     private @Nullable String getTrimPatternFromTemplate(Material template) {
-        TrimPattern trimPattern = vri.process().trim().fromTemplate(template);
+        TrimPattern trimPattern = vri.process().trimPattern().values()
+          .stream()
+          .filter(inner -> inner.template().equals(template))
+          .findFirst()
+          .orElse(null);
         if (trimPattern == null) {
             return null;
         }
@@ -118,9 +128,9 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
 
                 if (recipe instanceof Recipe.Smithing smithing) {
                     if (
-                            utils.ingredientToMaterials(smithing.template()).contains(template) &&
-                            utils.ingredientToMaterials(smithing.base()).contains(base) &&
-                            utils.ingredientToMaterials(smithing.addition()).contains(addition)
+                      utils.ingredientToMaterials(smithing.template()).contains(template) &&
+                      utils.ingredientToMaterials(smithing.base()).contains(base) &&
+                      utils.ingredientToMaterials(smithing.addition()).contains(addition)
                     ) {
                         return smithing;
                     }
@@ -140,30 +150,30 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
             for (String file : data.trim_material().files()) {
                 var trimMaterial = data.trim_material().file(file);
                 trimMaterials.add(TrimMaterial.create(
-                        NamespaceID.from(file),
-                        trimMaterial.asset_name(),
-                        Objects.requireNonNull(Material.fromNamespaceId(trimMaterial.ingredient())),
-                        trimMaterial.item_model_index(),
-                        Objects.requireNonNullElse(trimMaterial.override_armor_materials(), new HashMap<NamespaceID, String>())
-                                .entrySet().stream().collect(Collectors.toMap(
-                                        mapEntry -> mapEntry.getKey().asString(), Map.Entry::getValue
-                                )),
-                        trimMaterial.description()
+                  NamespaceID.from(file),
+                  trimMaterial.asset_name(),
+                  Objects.requireNonNull(Material.fromNamespaceId(trimMaterial.ingredient())),
+                  trimMaterial.item_model_index(),
+                  Objects.requireNonNullElse(trimMaterial.override_armor_materials(), new HashMap<NamespaceID, String>())
+                    .entrySet().stream().collect(Collectors.toMap(
+                      mapEntry -> mapEntry.getKey().asString(), Map.Entry::getValue
+                    )),
+                  trimMaterial.description()
                 ));
             }
 
             for (String file : data.trim_pattern().files()) {
                 var trimPattern = data.trim_pattern().file(file);
                 trimPatterns.add(TrimPattern.create(
-                        NamespaceID.from(file),
-                        trimPattern.asset_id(),
-                        Objects.requireNonNull(Material.fromNamespaceId(trimPattern.template_item())),
-                        trimPattern.description(),
-                        trimPattern.decal()
+                  NamespaceID.from(file),
+                  trimPattern.asset_id(),
+                  Objects.requireNonNull(Material.fromNamespaceId(trimPattern.template_item())),
+                  trimPattern.description(),
+                  trimPattern.decal()
                 ));
             }
         }
 
-        return Pair.of(trimMaterials,trimPatterns);
+        return Pair.of(trimMaterials, trimPatterns);
     }
 }

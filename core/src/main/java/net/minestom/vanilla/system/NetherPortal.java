@@ -11,8 +11,7 @@ import net.minestom.server.instance.block.Block;
 import net.minestom.server.network.packet.server.play.EffectPacket;
 import net.minestom.server.network.packet.server.play.ParticlePacket;
 import net.minestom.server.particle.Particle;
-import net.minestom.server.particle.ParticleCreator;
-import net.minestom.vanilla.dimensions.VanillaDimensionTypes;
+import net.minestom.server.world.DimensionType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
@@ -62,9 +61,9 @@ public final class NetherPortal {
         this.frameBottomRightCorner = frameBottomRightCorner;
         this.frameTopLeftCorner = frameTopLeftCorner;
         this.averagePosition = new Vec(
-                (frameBottomRightCorner.x() + frameTopLeftCorner.x()) / 2D,
-                (frameBottomRightCorner.y() + frameTopLeftCorner.y()) / 2D,
-                (frameBottomRightCorner.z() + frameTopLeftCorner.z()) / 2D
+          (frameBottomRightCorner.x() + frameTopLeftCorner.x()) / 2D,
+          (frameBottomRightCorner.y() + frameTopLeftCorner.y()) / 2D,
+          (frameBottomRightCorner.z() + frameTopLeftCorner.z()) / 2D
         );
 
         this.id = nextID++;
@@ -105,16 +104,19 @@ public final class NetherPortal {
             int y = pos.blockY();
             int z = pos.blockZ();
 
-            ParticlePacket particlePacket = ParticleCreator.createParticlePacket(Particle.BLOCK, false,
-                    x + 0.5f, y, z + 0.5f,
-                    0.4f, 0.5f, 0.4f,
-                    0.3f, 10, writer -> writer.writeVarInt(Block.NETHER_PORTAL.id()));
+            ParticlePacket particlePacket = new ParticlePacket(
+              Particle.BLOCK.withBlock(Block.NETHER_PORTAL),
+              false,
+              x + 0.5, y, z + 0.5,
+              0.4f, 0.5f, 0.4f,
+              0.3f, 10
+            );
 
             EffectPacket effectPacket = new EffectPacket(
-                    Effects.BLOCK_BREAK.getId(),
-                    pos,
-                    Block.NETHER_PORTAL.id(),
-                    false
+              Effects.BLOCK_BREAK.getId(),
+              pos,
+              Block.NETHER_PORTAL.id(),
+              false
             );
 
             Chunk chunk = instance.getChunkAt(pos);
@@ -126,7 +128,7 @@ public final class NetherPortal {
     }
 
     public boolean tryFillFrame(Instance instance) {
-        if (instance.getDimensionType() == VanillaDimensionTypes.END) {
+        if (instance.getDimensionType() == DimensionType.THE_END) {
             return false;
         }
 
@@ -219,8 +221,8 @@ public final class NetherPortal {
             Block block = instance.getBlock(position);
 
             if (!block.isAir() &&
-                    block != Block.FIRE &&
-                    block != Block.NETHER_PORTAL
+                block != Block.FIRE &&
+                block != Block.NETHER_PORTAL
             ) {
                 continue;
             }
@@ -385,8 +387,8 @@ public final class NetherPortal {
                 }
                 Block currentBlock = instance.getBlock(x, y, z);
                 if (!currentBlock.isAir() &&
-                        (!currentBlock.compare(Block.FIRE)) &&
-                        (!currentBlock.compare(Block.NETHER_PORTAL))
+                    (!currentBlock.compare(Block.FIRE)) &&
+                    (!currentBlock.compare(Block.NETHER_PORTAL))
                 ) {
                     return false;
                 }
