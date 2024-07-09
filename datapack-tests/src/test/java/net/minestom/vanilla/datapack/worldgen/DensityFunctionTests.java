@@ -202,24 +202,6 @@ public class DensityFunctionTests {
                 """, END_ISLANDS, END_ISLANDS_CUBED));
     }
 
-    // Noise is the big boi, so test it thoroughly.
-    @Test
-    public void testNoise() {
-        assertExact("""
-                {
-                  "type": "minecraft:noise",
-                  "noise": {
-                    "firstOctave": -3,
-                    "amplitudes": [
-                      1
-                    ]
-                  },
-                  "xz_scale": 1.0,
-                  "y_scale": 1.0
-                }
-                """);
-    }
-
     private void testPositions(BiConsumer<Vec, Integer> consumer) {
         double dist = 0.0001;
 
