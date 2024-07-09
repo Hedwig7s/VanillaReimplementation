@@ -1,7 +1,7 @@
 package net.minestom.vanilla.blocks;
 
-import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
@@ -218,7 +218,7 @@ public enum VanillaBlocks {
                 .handler(loot::spawnLoot)
                 .build());
 
-        Short2ObjectMap<VanillaBlockBehaviour> stateId2behaviour = new Short2ObjectOpenHashMap<>();
+        Int2ObjectMap<VanillaBlockBehaviour> stateId2behaviour = new Int2ObjectOpenHashMap<>();
 
         for (VanillaBlocks vb : values()) {
             BlockContext context = new BlockContext() {
@@ -251,7 +251,7 @@ public enum VanillaBlocks {
         vri.process().eventHandler().addChild(events);
     }
 
-    private static void registerEvents(EventNode<Event> node, Short2ObjectMap<VanillaBlockBehaviour> behaviours) {
+    private static void registerEvents(EventNode<Event> node, Int2ObjectMap<VanillaBlockBehaviour> behaviours) {
         node.addListener(EventListener.builder(PlayerBlockPlaceEvent.class)
                 .filter(event -> behaviours.containsKey(event.getBlock().stateId()))
                 .handler(event -> {

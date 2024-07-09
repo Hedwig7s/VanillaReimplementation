@@ -4,8 +4,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.instance.Chunk;
-import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.generator.GenerationUnit;
+import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.generator.Generator;
 import net.minestom.server.instance.generator.UnitModifier;
 import net.minestom.server.utils.NamespaceID;
@@ -16,9 +16,11 @@ import net.minestom.vanilla.datapack.worldgen.NoiseSettings;
 import net.minestom.vanilla.datapack.worldgen.WorldgenContext;
 import net.minestom.vanilla.datapack.worldgen.biome.BiomeSource;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class NoiseChunkGenerator implements Generator {
@@ -97,7 +99,6 @@ public class NoiseChunkGenerator implements Generator {
         int cellCountY = Math.floorDiv(maxY - minY, cellHeight);
 
         NoiseChunk noiseChunk = this.getOrCreateNoiseChunk(randomState, chunk);
-
         for (int cellX = 0; cellX < cellCountXZ; cellX += 1) {
             for (int cellZ = 0; cellZ < (onlyFirstZ ? 1 : cellCountXZ); cellZ += 1) {
                 for (int cellY = cellCountY - 1; cellY >= 0; cellY -= 1) {
@@ -108,7 +109,6 @@ public class NoiseChunkGenerator implements Generator {
                         for (int offX = 0; offX < cellWidth; offX += 1) {
                             int blockX = chunk.minX() + cellX * cellWidth + offX;
                             int sectionX = blockX & 0xF;
-
                             for (int offZ = 0; offZ < (onlyFirstZ ? 1 : cellWidth); offZ += 1) {
                                 int blockZ = chunk.minZ() + cellZ * cellWidth + offZ;
                                 int sectionZ = blockZ & 0xF;
@@ -173,16 +173,15 @@ public class NoiseChunkGenerator implements Generator {
     }
 
     @Override
-    public void generate(@NotNull GenerationUnit unit) {
+    public synchronized void generate(@NotNull GenerationUnit unit) {
         Point start = unit.absoluteStart();
         Point end = unit.absoluteEnd();
-
         for (int chunkX = start.chunkX(); chunkX < end.chunkX(); chunkX++) {
             for (int chunkZ = start.chunkZ(); chunkZ < end.chunkZ(); chunkZ++) {
                 TargetChunkImpl chunk = new TargetChunkImpl(unit.modifier(),
-                  chunkX, chunkZ,
-                  dimensionType.minY() / Chunk.CHUNK_SECTION_SIZE,
-                  dimensionType.maxY() / Chunk.CHUNK_SECTION_SIZE);
+                        chunkX, chunkZ,
+                        dimensionType.minY() / Chunk.CHUNK_SECTION_SIZE,
+                        dimensionType.maxY() / Chunk.CHUNK_SECTION_SIZE);
                 RandomState randomState = new RandomState(settings, 125);
                 fill(this.datapack, randomState, chunk);
             }
@@ -242,7 +241,7 @@ public class NoiseChunkGenerator implements Generator {
             }
             int index = ChunkUtils.getBlockIndex(x, y, z);
             this.blocks.put(index, block);
-            modifier.setBlock(x - minX(), y, z - minZ(), block);
+            modifier.setBlock(x, y, z , block);
         }
     }
 
