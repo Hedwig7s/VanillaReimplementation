@@ -154,31 +154,31 @@ public interface Datapack {
     record WorldGen(
             FileSystem<Biome> biome,
             FileSystem<Carver> configured_carver,
-            FileSystem<ByteArray> configured_feature,
+            FileSystem<ConfiguredFeature> configured_feature,
             FileSystem<DensityFunction> density_function,
             FileSystem<ByteArray> flat_level_generator_preset,
             FileSystem<ByteArray> multi_noise_biome_source_parameter_list,
             FileSystem<Noise> noise,
             FileSystem<NoiseSettings> noise_settings,
-            FileSystem<ByteArray> placed_feature,
-            FileSystem<ByteArray> processor_list,
+            FileSystem<PlacedFeature> placed_feature,
+            FileSystem<ProcessorList> processor_list,
             FileSystem<ByteArray> structure,
             FileSystem<ByteArray> structure_set,
             FileSystem<ByteArray> template_pool,
             FileSystem<ByteArray> world_preset
-            ) {
+    ) {
         public static WorldGen from(FileSystem<ByteArray> worldgen) {
             return new WorldGen(
                     DatapackLoader.parseJsonFolder(worldgen, "biome", DatapackLoader.adaptor(Biome.class)),
                     DatapackLoader.parseJsonFolder(worldgen, "configured_carver", DatapackLoader.adaptor(Carver.class)),
-                    worldgen.folder("configured_feature"),
+                    DatapackLoader.parseJsonFolder(worldgen, "configured_feature", DatapackLoader.adaptor(ConfiguredFeature.class)),
                     DatapackLoader.parseJsonFolder(worldgen, "density_function", DatapackLoader.adaptor(DensityFunction.class)),
                     worldgen.folder("flat_level_generator_preset"),
                     worldgen.folder("multi_noise_biome_source_parameter_list"),
                     DatapackLoader.parseJsonFolder(worldgen, "noise", DatapackLoader.adaptor(Noise.class)),
                     DatapackLoader.parseJsonFolder(worldgen, "noise_settings", DatapackLoader.adaptor(NoiseSettings.class)),
-                    worldgen.folder("placed_feature"),
-                    worldgen.folder("processor_list"),
+                    DatapackLoader.parseJsonFolder(worldgen, "placed_feature", DatapackLoader.adaptor(PlacedFeature.class)),
+                    DatapackLoader.parseJsonFolder(worldgen, "processor_list", DatapackLoader.adaptor(ProcessorList.class)),
                     worldgen.folder("structure"),
                     worldgen.folder("structure_set"),
                     worldgen.folder("template_pool"),

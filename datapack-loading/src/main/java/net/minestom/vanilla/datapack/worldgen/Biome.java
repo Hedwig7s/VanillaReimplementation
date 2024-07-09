@@ -36,7 +36,7 @@ public record Biome(
         float downfall,
         Effects effects,
         Carvers carvers,
-        Object features,
+        List<JsonUtils.SingleOrList<PlacedFeature>> features,
         @Optional Float creature_spawn_probability,
         Map<MobCategory, List<SpawnerData>> spawners,
         Map<NamespaceID, SpawnCost> spawn_costs

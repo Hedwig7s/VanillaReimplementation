@@ -127,7 +127,47 @@ public class JsonUtils {
             return DatapackLoader.moshi(clazz);
         });
     }
+    public static <T> T sealedUnionString(JsonReader reader, Class<T> clazz, String property) throws IOException {
+        String unionTag;
+        try (JsonReader json = reader.peekJson()) {
+            json.beginObject();
+            unionTag = JsonUtils.findProperty(json, property, JsonReader::nextString);
+        }
+        for (Class<?> permittedSubclass : clazz.getPermittedSubclasses()) {
+            StringTag someTag = permittedSubclass.getAnnotation(StringTag.class);
+            if (someTag != null && someTag.value().equals(unionTag)) {
+                return DatapackLoader.<T>moshi(permittedSubclass).apply(reader);
+            }
+        }
+        throw new IOException("Unhandled tag: " + unionTag);
+    }
 
+    public static <T> T sealedUnionNamespace(JsonReader reader, Class<T> clazz, String property) throws IOException {
+        NamespaceID unionTag;
+        try (JsonReader json = reader.peekJson()) {
+            json.beginObject();
+            unionTag = JsonUtils.findProperty(json, property, DatapackLoader.moshi(NamespaceID.class));
+        }
+        for (Class<?> permittedSubclass : clazz.getPermittedSubclasses()) {
+            NamespaceTag someTag = permittedSubclass.getAnnotation(NamespaceTag.class);
+            if (someTag != null && NamespaceID.from(someTag.value()).equals(unionTag)) {
+                return DatapackLoader.<T>moshi(permittedSubclass).apply(reader);
+            }
+        }
+        throw new IOException("Unhandled tag: " + unionTag);
+    }
+
+    public static NamespaceID getNamespaceTag(Class<?> clazz) {
+        NamespaceTag tag = clazz.getAnnotation(NamespaceTag.class);
+        if (tag == null) throw new IllegalStateException("No namespace tag found for " + clazz);
+        return NamespaceID.from(tag.value());
+    }
+
+    public static String getStringTag(Class<?> clazz) {
+        StringTag tag = clazz.getAnnotation(StringTag.class);
+        if (tag == null) throw new IllegalStateException("No string tag found for " + clazz);
+        return tag.value();
+    }
     public static <T> T unionStringTypeMap(JsonReader reader, String key, Map<String, IoFunction<JsonReader, T>> map) throws IOException {
         return unionStringType(reader, key, map::get);
     }
@@ -158,7 +198,7 @@ public class JsonUtils {
         // Find the correct handler, and call it
         IoFunction<JsonReader, T> readFunction = findReader.apply(property);
         if (readFunction == null)
-            throw new IOException("Unknown type: " + property);
+            throw new IllegalStateException("Unknown type: " + property);
         return readFunction.apply(reader);
     }
 

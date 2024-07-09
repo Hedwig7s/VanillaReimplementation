@@ -1,5 +1,5 @@
 plugins {
-//    id("org.spongepowered.gradle.vanilla") version "0.2.1-SNAPSHOT"
+    id("org.spongepowered.gradle.vanilla") version "0.2.1-SNAPSHOT"
 }
 
 dependencies {
@@ -14,9 +14,9 @@ tasks.test {
     useJUnitPlatform()
 }
 
-//minecraft {
-//    version("1.20.6")
-//    runs {
-//        server()
-//    }
-//}
+minecraft {
+    version("1.21")
+    runs {
+        server()
+    }
+}
