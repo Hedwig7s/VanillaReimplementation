@@ -51,7 +51,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.lang.reflect.Type;
 import java.util.*;
 import java.util.function.Consumer;
@@ -94,7 +93,7 @@ public class DatapackLoader {
         register(builder, CompoundBinaryTag.class, DatapackLoader::nbtCompoundFromJson);
         register(builder, Block.class, DatapackLoader::blockFromJson);
         register(builder, Enchantment.class, DatapackLoader::enchantmentFromJson);
-        register(builder, DynamicRegistry.Key.class, DatapackLoader::enchantmentRegistryFromJson);
+        register(builder, DynamicRegistry.Key.class, DatapackLoader::dynamicRegistryKeyFromJson);
         register(builder, EntityType.class, DatapackLoader::entityTypeFromJson);
         register(builder, Material.class, DatapackLoader::materialFromJson);
         register(builder, Component.class, reader -> {
@@ -475,7 +474,7 @@ public class DatapackLoader {
                 .slots(slots)
                 .build();
     }
-    private static DynamicRegistry.Key<Enchantment> enchantmentRegistryFromJson(JsonReader reader) throws IOException {
+    private static DynamicRegistry.Key<Enchantment> dynamicRegistryKeyFromJson(JsonReader reader) throws IOException { // This is horrible, but I have no idea how else to do this
         Enchantment enchantment = enchantmentFromJson(reader);
         DynamicRegistry<Enchantment> enchantmentRegistry = MinecraftServer.getEnchantmentRegistry();
         return enchantmentRegistry.register(namespaceFromJson(reader), enchantment);
