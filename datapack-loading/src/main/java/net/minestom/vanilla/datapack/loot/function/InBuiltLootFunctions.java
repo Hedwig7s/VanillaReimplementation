@@ -13,16 +13,17 @@ import net.minestom.server.entity.Player;
 import net.minestom.server.entity.PlayerSkin;
 import net.minestom.server.entity.attribute.Attribute;
 import net.minestom.server.entity.attribute.AttributeOperation;
+import net.minestom.server.entity.EquipmentSlotGroup;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.instance.block.BlockHandler;
 import net.minestom.server.item.ItemComponent;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
-import net.minestom.server.item.attribute.AttributeSlot;
 import net.minestom.server.item.component.AttributeList;
 import net.minestom.server.item.component.EnchantmentList;
 import net.minestom.server.item.component.HeadProfile;
 import net.minestom.server.item.enchant.Enchantment;
+import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.tag.Tag;
 import net.minestom.server.utils.NamespaceID;
 import net.minestom.vanilla.datapack.DatapackLoader;
@@ -36,6 +37,7 @@ import net.minestom.vanilla.utils.JavaUtils;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.*;
 import java.util.random.RandomGenerator;
 
@@ -50,7 +52,7 @@ interface InBuiltLootFunctions {
             return NamespaceID.from("minecraft:apply_bonus");
         }
 
-        Enchantment enchantment();
+        DynamicRegistry.Key<Enchantment> enchantment();
 
         NamespaceID formula();
 
@@ -62,7 +64,7 @@ interface InBuiltLootFunctions {
             ));
         }
 
-        record BinomialWithBonusCount(Enchantment enchantment, Parameters parameters) implements ApplyBonus {
+        record BinomialWithBonusCount(DynamicRegistry.Key<Enchantment> enchantment, Parameters parameters) implements ApplyBonus {
             @Override
             public NamespaceID formula() {
                 return NamespaceID.from("minecraft:binomial_with_bonus_count");
@@ -87,7 +89,7 @@ interface InBuiltLootFunctions {
             }
         }
 
-        record UniformBonusCount(Enchantment enchantment, Parameters parameters) implements ApplyBonus {
+        record UniformBonusCount(DynamicRegistry.Key<Enchantment> enchantment, Parameters parameters) implements ApplyBonus {
 
             @Override
             public NamespaceID formula() {
@@ -106,7 +108,7 @@ interface InBuiltLootFunctions {
             }
         }
 
-        record OreDrops(Enchantment enchantment) implements ApplyBonus {
+        record OreDrops(DynamicRegistry.Key<Enchantment> enchantment) implements ApplyBonus {
 
             @Override
             public NamespaceID formula() {
@@ -339,8 +341,13 @@ interface InBuiltLootFunctions {
             // TODO: Find discoverable enchantments
             // For now we will just use all possible enchantments, with level 1-3
             EnchantmentList enchantmentList = itemStack.get(ItemComponent.ENCHANTMENTS, new EnchantmentList(Collections.emptyMap()));
-            for (Enchantment enchantment : Enchantment.values()) {
-                enchantmentList.with(enchantment, (short) context.random().nextInt(1, 4));
+            for (Field field : Enchantment.class.getFields()) {
+                try {
+                    DynamicRegistry.Key<Enchantment> enchantment = (DynamicRegistry.Key<Enchantment>) field.get(null);
+                    enchantmentList.with(enchantment, (short) context.random().nextInt(1, 4));
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
             }
 
             return itemStack.with(ItemComponent.ENCHANTMENTS, enchantmentList);
@@ -367,7 +374,17 @@ interface InBuiltLootFunctions {
 
             // TODO: Proper enchanting system
             int level = levels.asInt().apply(numberContext) / 10;
-            Enchantment randomEnchant = JavaUtils.randomElement(context.random(), Enchantment.values());
+            Field[] enchantmentFields = Enchantment.class.getFields();
+            List<DynamicRegistry.Key<Enchantment>> enchantments = new ArrayList<>();
+            for (Field field : enchantmentFields) {
+                try {
+                    DynamicRegistry.Key<Enchantment> enchantmentKey = (DynamicRegistry.Key<Enchantment>) field.get(null);
+                    enchantments.add(enchantmentKey);
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+            }
+            DynamicRegistry.Key<Enchantment> randomEnchant = JavaUtils.randomElement(context.random(), enchantments);
 
             return itemStack.with(ItemComponent.ENCHANTMENTS, new EnchantmentList(new HashMap<>()).with(randomEnchant, level));
         }
@@ -634,14 +651,14 @@ interface InBuiltLootFunctions {
                 return id;
             }
 
-            public AttributeSlot toMinestom() {
+            public EquipmentSlotGroup toMinestom() {
                 return switch (this) {
-                    case MAINHAND -> AttributeSlot.MAINHAND;
-                    case OFFHAND -> AttributeSlot.OFFHAND;
-                    case FEET -> AttributeSlot.FEET;
-                    case LEGS -> AttributeSlot.LEGS;
-                    case CHEST -> AttributeSlot.CHEST;
-                    case HEAD -> AttributeSlot.HEAD;
+                    case MAINHAND -> EquipmentSlotGroup.MAIN_HAND;
+                    case OFFHAND -> EquipmentSlotGroup.OFF_HAND;
+                    case FEET -> EquipmentSlotGroup.FEET;
+                    case LEGS -> EquipmentSlotGroup.LEGS;
+                    case CHEST -> EquipmentSlotGroup.CHEST;
+                    case HEAD -> EquipmentSlotGroup.HEAD;
                 };
             }
         }
@@ -659,7 +676,7 @@ interface InBuiltLootFunctions {
                 Attribute attribute = Attribute.fromNamespaceId(attribute().path());
                 AttributeOperation operation = operation().toMinestom();
                 double amount = amount().asDouble().apply(context::random);
-                AttributeSlot slot = JavaUtils.randomElement(context.random(), slot()).toMinestom();
+                EquipmentSlotGroup slot = JavaUtils.randomElement(context.random(), slot()).toMinestom();
 
                 if (attribute == null) {
                     throw new IllegalArgumentException("Invalid attribute: " + attribute());
@@ -783,7 +800,7 @@ interface InBuiltLootFunctions {
     }
 
     // Modifies the item's enchantments. A book will convert to an enchanted book.
-    record SetEnchantments(Map<Enchantment, NumberProvider> enchantments,
+    record SetEnchantments(Map<DynamicRegistry.Key<Enchantment>, NumberProvider> enchantments,
                            @Nullable Boolean add) implements LootFunction {
 
         @Override
@@ -796,10 +813,10 @@ interface InBuiltLootFunctions {
             boolean add = Objects.requireNonNullElse(this.add, false);
             ItemStack itemStack = context.itemStack();
 
-            Map<Enchantment, Integer> enchantmentMap = itemStack.get(ItemComponent.ENCHANTMENTS, EnchantmentList.EMPTY).enchantments();
+            Map<DynamicRegistry.Key<Enchantment>, Integer> enchantmentMap = itemStack.get(ItemComponent.ENCHANTMENTS, EnchantmentList.EMPTY).enchantments();
 
             for (var entry : enchantments.entrySet()) {
-                Enchantment enchantment = entry.getKey();
+                DynamicRegistry.Key<Enchantment> enchantment = entry.getKey();
                 int count = entry.getValue().asInt().apply(context::random);
 
                 if (add) {

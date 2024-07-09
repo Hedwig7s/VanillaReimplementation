@@ -3,7 +3,7 @@ plugins {
     `java-library`
     `maven-publish`
     id("com.github.harbby.gradle.serviceloader") version ("1.1.8")
-    id("com.github.johnrengelman.shadow") version ("8.1.1")
+    id("io.github.goooler.shadow") version "8.1.7"
 }
 
 subprojects {
@@ -12,7 +12,7 @@ subprojects {
     plugins.apply("java-library")
     plugins.apply("maven-publish")
     plugins.apply("com.github.harbby.gradle.serviceloader")
-    plugins.apply("com.github.johnrengelman.shadow")
+    plugins.apply("io.github.goooler.shadow")
 
     group = "net.minestom.vanilla"
     version = "indev"

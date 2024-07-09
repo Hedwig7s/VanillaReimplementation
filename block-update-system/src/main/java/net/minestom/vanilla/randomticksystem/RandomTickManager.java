@@ -1,7 +1,7 @@
 package net.minestom.vanilla.randomticksystem;
 
-import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Vec;
 import net.minestom.server.event.instance.InstanceTickEvent;
@@ -22,7 +22,7 @@ public class RandomTickManager {
 
     private static final Map<VanillaReimplementation, RandomTickManager> vri2managers =
             Collections.synchronizedMap(new WeakHashMap<>());
-    private static final Short2ObjectMap<RandomTickable> randomTickables = new Short2ObjectOpenHashMap<>();
+    private static final Int2ObjectMap<RandomTickable> randomTickables = new Int2ObjectOpenHashMap<>();
 
     private final VanillaReimplementation vri;
     private RandomTickManager(VanillaReimplementation vri) {

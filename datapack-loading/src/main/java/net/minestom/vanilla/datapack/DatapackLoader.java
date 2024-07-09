@@ -6,7 +6,13 @@ import it.unimi.dsi.fastutil.doubles.DoubleList;
 import it.unimi.dsi.fastutil.doubles.DoubleLists;
 import net.kyori.adventure.nbt.CompoundBinaryTag;
 import net.kyori.adventure.nbt.TagStringIO;
+import net.minestom.server.MinecraftServer;
+import net.minestom.server.component.DataComponent;
+import net.minestom.server.component.DataComponentMap;
+import net.minestom.server.entity.EquipmentSlotGroup;
+import net.minestom.server.item.enchant.EffectComponent;
 import net.minestom.server.item.enchant.Enchantment;
+import net.minestom.server.registry.DynamicRegistry;
 import net.minestom.server.utils.math.FloatRange;
 import net.minestom.vanilla.datapack.loot.NBTPath;
 import net.minestom.vanilla.datapack.trims.TrimMaterial;
@@ -79,6 +85,7 @@ public class DatapackLoader {
         register(builder, CompoundBinaryTag.class, DatapackLoader::nbtCompoundFromJson);
         register(builder, Block.class, DatapackLoader::blockFromJson);
         register(builder, Enchantment.class, DatapackLoader::enchantmentFromJson);
+        register(builder, DynamicRegistry.Key.class, DatapackLoader::enchantmentRegistryFromJson);
         register(builder, EntityType.class, DatapackLoader::entityTypeFromJson);
         register(builder, Material.class, DatapackLoader::materialFromJson);
         register(builder, Component.class, reader -> {
@@ -87,10 +94,10 @@ public class DatapackLoader {
         });
         register(builder, NamespaceID.class, reader -> NamespaceID.from(reader.nextString()));
         register(builder, FloatRange.class, DatapackLoader::floatRangeFromJson);
+        register(builder, DimensionType.class, DatapackLoader::dimensionTypeFromJson);
 
         // Misc
         register(builder, DoubleList.class, DatapackLoader::doubleListFromJson);
-
         // VRI Datapack
         register(builder, Advancement.Trigger.class, Advancement.Trigger::fromJson);
         register(builder, BlockState.class, BlockState::fromJson);
@@ -130,7 +137,6 @@ public class DatapackLoader {
         register(builder, Biome.CarversList.class, Biome.CarversList::fromJson);
         register(builder, Biome.CarversList.Single.class, Biome.CarversList.Single::fromJson);
         register(builder, HeightProvider.class, HeightProvider::fromJson);
-
         return builder.build();
     }
 
@@ -339,9 +345,211 @@ public class DatapackLoader {
     }
 
     private static Enchantment enchantmentFromJson(JsonReader reader) throws IOException {
-        return Enchantment.fromNamespaceId(Objects.requireNonNull(namespaceFromJson(reader)));
-    }
+        String description = null;
+        int weight = -1;
+        int maxLevel = -1;
+        int minBaseCost = -1;
+        int minPerLevelAboveCost = -1;
+        int maxBaseCost = -1;
+        int maxPerLevelAboveCost = -1;
+        int anvilCost = -1;
+        List<EquipmentSlotGroup> slots = new ArrayList<>();
+        DataComponentMap effects = DataComponentMap.EMPTY;
+        Map<String, EquipmentSlotGroup> slotMap = new HashMap<>();
+        slotMap.put("any", EquipmentSlotGroup.ANY);
+        slotMap.put("hand", EquipmentSlotGroup.HAND);
+        slotMap.put("mainhand", EquipmentSlotGroup.MAIN_HAND);
+        slotMap.put("offhand", EquipmentSlotGroup.OFF_HAND);
+        slotMap.put("armor", EquipmentSlotGroup.ARMOR);
+        slotMap.put("legs", EquipmentSlotGroup.LEGS);
+        slotMap.put("feet", EquipmentSlotGroup.FEET);
+        slotMap.put("chest", EquipmentSlotGroup.CHEST);
+        slotMap.put("head", EquipmentSlotGroup.HEAD);
+        slotMap.put("body", EquipmentSlotGroup.BODY);
+        reader.beginObject();
+        while (reader.hasNext()) {
+            String name = reader.nextName();
+            if (name.equals("description")) {
+                description = reader.nextString();
+            } else if (name.equals("weight")) {
+                weight = reader.nextInt();
+            } else if (name.equals("max_level")) {
+                maxLevel = reader.nextInt();
+            } else if (name.equals("min_cost")) {
+                reader.beginObject();
+                while (reader.hasNext()) {
+                    if (reader.nextName().equals("base_cost")) {
+                        minBaseCost = reader.nextInt();
+                    } else if (reader.nextName().equals("per_level_above_cost")) {
+                        minPerLevelAboveCost = reader.nextInt();
+                    } else {
+                        reader.skipValue();
+                    }
+                }
+                reader.endObject();
+            } else if (name.equals("max_cost")) {
+                reader.beginObject();
+                while (reader.hasNext()) {
+                    if (reader.nextName().equals("base_cost")) {
+                        maxBaseCost = reader.nextInt();
+                    } else if (reader.nextName().equals("per_level_above_cost")) {
+                        maxPerLevelAboveCost = reader.nextInt();
+                    } else {
+                        reader.skipValue();
+                    }
+                }
+                reader.endObject();
+            } else if (name.equals("anvil_cost")) {
+                anvilCost = reader.nextInt();
+            } else if (name.equals("slots")) {
+                reader.beginArray();
 
+                while (reader.hasNext()) {
+                    EquipmentSlotGroup equipmentSlotGroup = slotMap.get(reader.nextName().toLowerCase());
+                    if (equipmentSlotGroup == null) {
+                        reader.skipValue();
+                    }
+                    slots.add(equipmentSlotGroup);
+                }
+                reader.endArray();
+            } else if (name.equals("effects")) {
+                reader.beginArray();
+                while (reader.hasNext()) {
+                    DataComponent effect = EffectComponent.fromNamespaceId(reader.nextString());
+                    if (effect == null) {
+                        reader.skipValue();
+                    }
+                    effects.set(effect);
+                }
+                reader.endArray();
+            } else {
+                reader.skipValue();
+            }
+        }
+        reader.endObject();
+        assert description != null : "Description is missing";
+        assert weight > 0 && maxLevel <= 1024 : "Weight is missing or invalid";
+        assert maxLevel > 0 && maxLevel < 256 : "Max level is missing or invalid";
+        assert minBaseCost > -1 : "Min base cost is missing or invalid";
+        assert minPerLevelAboveCost > -1 : "Min per level above cost is missing or invalid";
+        assert maxBaseCost > -1 : "Max base cost is missing or invalid";
+        assert maxPerLevelAboveCost > -1 : "Max per level above cost is missing or invalid";
+        assert anvilCost > -1 : "Anvil cost is missing or invalid";
+        assert !slots.isEmpty() : "Slots are missing";
+        return Enchantment.builder()
+                .description(Component.text(description))
+                .weight(weight)
+                .maxLevel(maxLevel)
+                .minCost(new Enchantment.Cost(minBaseCost, minPerLevelAboveCost))
+                .maxCost(new Enchantment.Cost(maxBaseCost, maxPerLevelAboveCost))
+                .anvilCost(anvilCost)
+                .effects(effects)
+                .slots(slots)
+                .build();
+    }
+    private static DynamicRegistry.Key<Enchantment> enchantmentRegistryFromJson(JsonReader reader) throws IOException {
+        Enchantment enchantment = enchantmentFromJson(reader);
+        DynamicRegistry<Enchantment> enchantmentRegistry = MinecraftServer.getEnchantmentRegistry();
+        return enchantmentRegistry.register(namespaceFromJson(reader), enchantment);
+    }
+    private static DimensionType dimensionTypeFromJson(JsonReader reader) throws IOException {
+        Boolean ultrawarm = null;
+        Boolean natural = null;
+        double coordinateScale = -1.0d;
+        Boolean hasSkylight = null;
+        Boolean hasCeiling = null;
+        float ambientLight = -1.0f;
+        Long fixedTime = null;
+        NumberProvider.Int monsterSpawnLightLevel = null;
+        int monsterSpawnBlockLightLimit = -1;
+        Boolean piglinSafe = null;
+        Boolean bedWorks = null;
+        Boolean respawnAnchorWorks = null;
+        Boolean hasRaids = null;
+        int logicalHeight = -1;
+        int minY = -2033;
+        int height = -1;
+        String infiniburn = "";
+        String effects = "minecraft:overworld";
+        reader.beginObject();
+        while (reader.hasNext()) {
+            String name = reader.nextName();
+            if (name.equals("ultrawarm")) {
+                ultrawarm = reader.nextBoolean();
+            } else if (name.equals("natural")) {
+                natural = reader.nextBoolean();
+            } else if (name.equals("coordinate_scale")) {
+                coordinateScale = reader.nextDouble();
+            } else if (name.equals("has_skylight")) {
+                hasSkylight = reader.nextBoolean();
+            } else if (name.equals("has_ceiling")) {
+                hasCeiling = reader.nextBoolean();
+            } else if (name.equals("ambient_light")) {
+                ambientLight = Float.parseFloat(reader.nextString());
+            } else if (name.equals("fixed_time")) {
+                fixedTime = reader.nextLong();
+            } else if (name.equals("monster_spawn_light_level")) {
+                monsterSpawnLightLevel = NumberProvider.Int.fromJson(reader);
+            } else if (name.equals("monster_spawn_block_light_limit")) {
+                monsterSpawnBlockLightLimit = reader.nextInt();
+            } else if (name.equals("piglin_safe")) {
+                piglinSafe = reader.nextBoolean();
+            } else if (name.equals("bed_works")) {
+                bedWorks = reader.nextBoolean();
+            } else if (name.equals("respawn_anchor_works")) {
+                respawnAnchorWorks = reader.nextBoolean();
+            } else if (name.equals("has_raids")) {
+                hasRaids = reader.nextBoolean();
+            } else if (name.equals("logical_height")) {
+                logicalHeight = reader.nextInt();
+            } else if (name.equals("min_y")) {
+                minY = reader.nextInt();
+            } else if (name.equals("height")) {
+                height = reader.nextInt();
+            } else if (name.equals("infiniburn")) {
+                infiniburn = reader.nextString();
+            } else if (name.equals("effects")) {
+                effects = reader.nextString();
+            }
+        }
+        reader.endObject();
+        assert ultrawarm != null : "ultrawarm is missing";
+        assert natural != null : "natural is missing";
+        assert coordinateScale > 0.00001d && coordinateScale < 30000000.0 : "coordinate_scale is missing or invalid";
+        assert hasSkylight != null : "has_skylight is missing";
+        assert hasCeiling != null : "hasCeiling is missing";
+        assert ambientLight > -0.00001f : "ambient_light is missing or invalid";
+        // Following are unimplemented
+        //assert monsterSpawnLightLever != null && monsterSpawnLightLevel.asInt() > -1 && monsterSpawnLightLevel.asInt() < 16: "monster_spawn_light_level is missing or invalid";
+        //assert monsterSpawnBlockLightLimit > -1 && monsterSpawnBlockLightLimit < 16: "monster_spawn_block_light_limit is missing or invalid";
+        assert piglinSafe != null : "piglin_safe is missing";
+        assert bedWorks != null : "bed_works is missing";
+        assert respawnAnchorWorks != null : "respawn_anchor_works is missing";
+        assert hasRaids != null : "has_raids is missing";
+        assert height >= 16 && height <= 4064 && height % 16 == 0  : "height is missing or invalid";
+        assert logicalHeight >= 16 && logicalHeight <= height : "logical_height is missing or invalid";
+        assert minY >= -2032 && minY <= 2031 && Math.abs(minY) % 16 == 0 : "min_y is missing or invalid";
+        DimensionType.Builder builder = DimensionType.builder()
+                .ultrawarm(ultrawarm)
+                .natural(natural)
+                .coordinateScale(coordinateScale)
+                .hasSkylight(hasSkylight)
+                .hasCeiling(hasCeiling)
+                .ambientLight(ambientLight)
+                .piglinSafe(piglinSafe)
+                .bedWorks(bedWorks)
+                .respawnAnchorWorks(respawnAnchorWorks)
+                .hasRaids(hasRaids)
+                .height(height)
+                .logicalHeight(logicalHeight)
+                .minY(minY)
+                .infiniburn(infiniburn)
+                .effects(effects);
+        if (fixedTime != null) {
+            builder.fixedTime(fixedTime);
+        }
+        return builder.build();
+    }
     private static EntityType entityTypeFromJson(JsonReader reader) throws IOException {
         return EntityType.fromNamespaceId(Objects.requireNonNull(namespaceFromJson(reader)));
     }

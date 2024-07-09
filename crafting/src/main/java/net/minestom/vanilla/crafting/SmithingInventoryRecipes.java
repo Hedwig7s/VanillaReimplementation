@@ -35,8 +35,8 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
         EventNode<Event> node = EventNode.all("vri:smithing-inventory-recipes");
 
         var trims = getTrims();
-        trims.left().forEach(trimMaterial -> vri.process().trimMaterial().register(trimMaterial));
-        trims.right().forEach(trimPattern -> vri.process().trimPattern().register(trimPattern));
+        trims.left().forEach(trimMaterial -> vri.process().trimMaterial().register(trimMaterial.assetName(),trimMaterial));
+        trims.right().forEach(trimPattern -> vri.process().trimPattern().register(trimPattern.assetId(),trimPattern));
 
         // TODO: shift-click mass crafting and take out.
 
@@ -100,7 +100,7 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
         if (trimMaterial == null) {
             return null;
         }
-        return trimMaterial.name();
+        return trimMaterial.assetName();
     }
 
     private @Nullable String getTrimPatternFromTemplate(Material template) {
@@ -112,7 +112,7 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
         if (trimPattern == null) {
             return null;
         }
-        return trimPattern.name();
+        return trimPattern.assetId().namespace();
     }
 
     private @Nullable Recipe.Smithing getRecipe(Material template, Material base, Material addition) {
@@ -150,7 +150,6 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
             for (String file : data.trim_material().files()) {
                 var trimMaterial = data.trim_material().file(file);
                 trimMaterials.add(TrimMaterial.create(
-                  NamespaceID.from(file),
                   trimMaterial.asset_name(),
                   Objects.requireNonNull(Material.fromNamespaceId(trimMaterial.ingredient())),
                   trimMaterial.item_model_index(),
@@ -165,7 +164,6 @@ public record SmithingInventoryRecipes(Datapack datapack, VanillaReimplementatio
             for (String file : data.trim_pattern().files()) {
                 var trimPattern = data.trim_pattern().file(file);
                 trimPatterns.add(TrimPattern.create(
-                  NamespaceID.from(file),
                   trimPattern.asset_id(),
                   Objects.requireNonNull(Material.fromNamespaceId(trimPattern.template_item())),
                   trimPattern.description(),

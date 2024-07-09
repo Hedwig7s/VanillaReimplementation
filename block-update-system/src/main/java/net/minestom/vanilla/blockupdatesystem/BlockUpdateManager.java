@@ -1,7 +1,7 @@
 package net.minestom.vanilla.blockupdatesystem;
 
-import it.unimi.dsi.fastutil.shorts.Short2ObjectMap;
-import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minestom.server.coordinate.Point;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.coordinate.Vec;
@@ -31,7 +31,7 @@ public class BlockUpdateManager {
             Collections.synchronizedMap(new WeakHashMap<>());
 
     // Block updatables
-    private static final Short2ObjectMap<BlockUpdatable> blockUpdatables = new Short2ObjectOpenHashMap<>();
+    private static final Int2ObjectMap<BlockUpdatable> blockUpdatables = new Int2ObjectOpenHashMap<>();
 
     public static void registerUpdatable(short stateId, @NotNull BlockUpdatable updatable) {
         synchronized (blockUpdatables) {
