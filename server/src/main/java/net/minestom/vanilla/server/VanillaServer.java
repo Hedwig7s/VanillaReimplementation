@@ -6,6 +6,7 @@ import net.minestom.server.entity.GameMode;
 import net.minestom.server.event.Event;
 import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
+import net.minestom.server.extras.bungee.BungeeCordProxy;
 import net.minestom.server.extras.lan.OpenToLAN;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
@@ -21,6 +22,11 @@ import net.minestom.vanilla.system.ServerProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -44,8 +50,8 @@ class VanillaServer {
 
         VanillaServer vanillaServer = new VanillaServer(server, vri, args);
         Logger.info("Vanilla Reimplementation (%s) is setup.", MinecraftServer.VERSION_NAME);
-
-        vanillaServer.start("0.0.0.0", 25565);
+        ServerProperties properties = vanillaServer.getOrGenerateServerProperties();
+        vanillaServer.start("0.0.0.0", Integer.parseInt(properties.get("server-port")));
     }
 
     private final MinecraftServer minecraftServer;
@@ -144,9 +150,9 @@ class VanillaServer {
     }
 
     private ServerProperties getOrGenerateServerProperties() {
-        // TODO: Load from file correctly
         try {
-            return new ServerProperties("""
+            File propertyFile = new File("./server.properties");
+            String properties = """
                     #Minecraft server properties from a fresh 1.16.1 server
                     #Generated on Mon Jul 13 17:23:48 CEST 2020
                     spawn-protection=16
@@ -197,7 +203,25 @@ class VanillaServer {
                     enable-jmx-monitoring=false
                     motd=A Minecraft Server
                     enable-rcon=false
-                    """);
+                    """;
+            if (!propertyFile.exists()) {
+                if (propertyFile.createNewFile()) {
+                    try {
+                        FileOutputStream outputStream = new FileOutputStream(propertyFile);
+                        outputStream.write(properties.getBytes(StandardCharsets.UTF_8));
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                }
+            } else {
+                try {
+                    FileInputStream inputStream = new FileInputStream(propertyFile);
+                    properties = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            return new ServerProperties(properties);
         } catch (Throwable e) {
             e.printStackTrace();
             System.exit(1);
