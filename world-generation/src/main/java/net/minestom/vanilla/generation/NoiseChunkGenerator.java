@@ -15,10 +15,13 @@ import net.minestom.vanilla.datapack.Datapack;
 import net.minestom.vanilla.datapack.worldgen.NoiseSettings;
 import net.minestom.vanilla.datapack.worldgen.WorldgenContext;
 import net.minestom.vanilla.datapack.worldgen.biome.BiomeSource;
+import net.minestom.vanilla.logging.Logger;
+import net.minestom.vanilla.system.ServerProperties;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.UnknownNullability;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -176,13 +179,26 @@ public class NoiseChunkGenerator implements Generator {
     public synchronized void generate(@NotNull GenerationUnit unit) {
         Point start = unit.absoluteStart();
         Point end = unit.absoluteEnd();
+        ServerProperties properties = ServerProperties.getOrGenerateServerProperties();
+        int seed;
+        try {
+            seed = Integer.parseInt(properties.get("level-seed"));
+        } catch (NumberFormatException ignored) {
+            properties.set("level-seed", "125");
+            try {
+                properties.save();
+            } catch (IOException e) {
+                Logger.error("Failed to save seed\n" + e.getStackTrace());
+            }
+            seed = 125;
+        }
         for (int chunkX = start.chunkX(); chunkX < end.chunkX(); chunkX++) {
             for (int chunkZ = start.chunkZ(); chunkZ < end.chunkZ(); chunkZ++) {
                 TargetChunkImpl chunk = new TargetChunkImpl(unit.modifier(),
                         chunkX, chunkZ,
                         dimensionType.minY() / Chunk.CHUNK_SECTION_SIZE,
                         dimensionType.maxY() / Chunk.CHUNK_SECTION_SIZE);
-                RandomState randomState = new RandomState(settings, 125);
+                RandomState randomState = new RandomState(settings, seed);
                 fill(this.datapack, randomState, chunk);
             }
         }

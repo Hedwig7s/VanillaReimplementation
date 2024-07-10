@@ -8,6 +8,7 @@ import net.minestom.server.event.EventNode;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.extras.bungee.BungeeCordProxy;
 import net.minestom.server.extras.lan.OpenToLAN;
+import net.minestom.server.extras.velocity.VelocityProxy;
 import net.minestom.server.instance.Instance;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.network.ConnectionManager;
@@ -28,10 +29,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 
 class VanillaServer {
+
 
     /**
      * A standard vanilla server launch used for testing purposes
@@ -50,8 +54,46 @@ class VanillaServer {
 
         VanillaServer vanillaServer = new VanillaServer(server, vri, args);
         Logger.info("Vanilla Reimplementation (%s) is setup.", MinecraftServer.VERSION_NAME);
-        ServerProperties properties = vanillaServer.getOrGenerateServerProperties();
-        vanillaServer.start("0.0.0.0", Integer.parseInt(properties.get("server-port")));
+        ServerProperties properties = ServerProperties.getOrGenerateServerProperties();
+        int port;
+        try {
+            port = Integer.parseInt(properties.get("server.port"));
+        } catch (NumberFormatException ignored) {
+            properties.set("server-port", "25565");
+            saveProperties(properties);
+            port = 25565;
+        }
+        vanillaServer.start("0.0.0.0", port);
+        String proxyMode = properties.get("proxy-mode");
+        if (proxyMode != null) {
+            String token = properties.get("proxy-token");
+            switch (proxyMode.toUpperCase()) {
+                case "NONE":
+                    break;
+                case "LEGACY":
+                    BungeeCordProxy.enable();
+                    break;
+                case "MODERN":
+                    if (token == null || token.isEmpty()) {
+                        Logger.error("No proxy token defined!");
+                        properties.set("proxy-token", null);
+                        saveProperties(properties);
+                        break;
+                    }
+                    VelocityProxy.enable(token);
+                    break;
+                case "BUNGEEGUARD":
+                    if (token == null || token.isEmpty()) {
+                        Logger.error("No proxy token defined!");
+                        properties.set("proxy-token", null);
+                        saveProperties(properties);
+                        break;
+                    }
+                    BungeeCordProxy.setBungeeGuardTokens(Set.of(token));
+                    BungeeCordProxy.enable();
+                    break;
+            }
+        }
     }
 
     private final MinecraftServer minecraftServer;
@@ -65,7 +107,7 @@ class VanillaServer {
     public VanillaServer(@NotNull MinecraftServer minecraftServer, @NotNull VanillaReimplementation vri,
                          @Nullable String... args) {
         this.minecraftServer = minecraftServer;
-        this.serverProperties = getOrGenerateServerProperties();
+        this.serverProperties = ServerProperties.getOrGenerateServerProperties();
         this.vri = vri;
 
 
@@ -149,86 +191,13 @@ class VanillaServer {
         }
     }
 
-    private ServerProperties getOrGenerateServerProperties() {
-        try {
-            File propertyFile = new File("./server.properties");
-            String properties = """
-                    #Minecraft server properties from a fresh 1.16.1 server
-                    #Generated on Mon Jul 13 17:23:48 CEST 2020
-                    spawn-protection=16
-                    max-tick-time=60000
-                    query.port=25565
-                    generator-settings=
-                    sync-chunk-writes=true
-                    force-gamemode=false
-                    allow-nether=true
-                    enforce-whitelist=false
-                    gamemode=survival
-                    broadcast-console-to-ops=true
-                    enable-query=false
-                    player-idle-timeout=0
-                    difficulty=easy
-                    broadcast-rcon-to-ops=true
-                    spawn-monsters=true
-                    op-permission-level=4
-                    pvp=true
-                    entity-broadcast-range-percentage=100
-                    snooper-enabled=true
-                    level-type=default
-                    enable-status=true
-                    hardcore=false
-                    enable-command-block=false
-                    max-players=20
-                    network-compression-threshold=256
-                    max-world-size=29999984
-                    resource-pack-sha1=
-                    function-permission-level=2
-                    rcon.port=25575
-                    server-port=25565
-                    server-ip=
-                    spawn-npcs=true
-                    allow-flight=false
-                    level-name=world
-                    view-distance=10
-                    resource-pack=
-                    spawn-animals=true
-                    white-list=false
-                    rcon.password=
-                    generate-structures=true
-                    online-mode=false
-                    max-build-height=256
-                    level-seed=
-                    prevent-proxy-connections=false
-                    use-native-transport=true
-                    enable-jmx-monitoring=false
-                    motd=A Minecraft Server
-                    enable-rcon=false
-                    """;
-            if (!propertyFile.exists()) {
-                if (propertyFile.createNewFile()) {
-                    try {
-                        FileOutputStream outputStream = new FileOutputStream(propertyFile);
-                        outputStream.write(properties.getBytes(StandardCharsets.UTF_8));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            } else {
-                try {
-                    FileInputStream inputStream = new FileInputStream(propertyFile);
-                    properties = new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-            return new ServerProperties(properties);
-        } catch (Throwable e) {
-            e.printStackTrace();
-            System.exit(1);
-            return null;
+    private static void saveProperties(ServerProperties serverProperties) {
+        try{
+            serverProperties.save();
+        } catch (Exception e){
+            Logger.error("Failed to save server properties.\n" + e.getStackTrace());
         }
     }
-
     public void start(String address, int port) {
         minecraftServer.start(address, port);
     }
