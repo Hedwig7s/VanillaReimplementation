@@ -29,6 +29,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 class VanillaReimplementationImpl implements VanillaReimplementation {
@@ -128,6 +129,26 @@ class VanillaReimplementationImpl implements VanillaReimplementation {
         @Override
         public <T> void setTag(@NotNull Tag<T> tag, @Nullable T value) {
             tagHandler.setTag(tag, value);
+        }
+
+        @Override
+        public <T> @Nullable T getAndSetTag(@NotNull Tag<T> tag, @Nullable T t) {
+            return null;
+        }
+
+        @Override
+        public <T> void updateTag(@NotNull Tag<T> tag, @NotNull UnaryOperator<@UnknownNullability T> unaryOperator) {
+
+        }
+
+        @Override
+        public <T> @UnknownNullability T updateAndGetTag(@NotNull Tag<T> tag, @NotNull UnaryOperator<@UnknownNullability T> unaryOperator) {
+            return null;
+        }
+
+        @Override
+        public <T> @UnknownNullability T getAndUpdateTag(@NotNull Tag<T> tag, @NotNull UnaryOperator<@UnknownNullability T> unaryOperator) {
+            return null;
         }
     }
 
