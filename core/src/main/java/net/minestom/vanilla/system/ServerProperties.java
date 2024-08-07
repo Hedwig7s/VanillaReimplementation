@@ -111,12 +111,12 @@ public class ServerProperties {
                     max-build-height=256
                     level-seed=125
                     prevent-proxy-connections=false
+                    proxy-mode=NONE
+                    proxy-token=
                     use-native-transport=true
                     enable-jmx-monitoring=false
                     motd=A Minecraft Server
                     enable-rcon=false
-                    proxy-mode=NONE
-                    proxy-token=
                     """;
             if (!propertyFile.exists()) {
                 if (propertyFile.createNewFile()) {

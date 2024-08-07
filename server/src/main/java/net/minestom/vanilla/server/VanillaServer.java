@@ -1,6 +1,7 @@
 package net.minestom.vanilla.server;
 
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.ServerFlag;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.event.Event;
@@ -57,7 +58,7 @@ class VanillaServer {
         ServerProperties properties = ServerProperties.getOrGenerateServerProperties();
         int port;
         try {
-            port = Integer.parseInt(properties.get("server.port"));
+            port = Integer.parseInt(properties.get("server-port"));
         } catch (NumberFormatException ignored) {
             properties.set("server-port", "25565");
             saveProperties(properties);
@@ -161,7 +162,7 @@ class VanillaServer {
 
         // Preload chunks
         long start = System.nanoTime();
-        int radius = MinecraftServer.getChunkViewDistance();
+        int radius = ServerFlag.CHUNK_VIEW_DISTANCE;
         int total = radius * 2 * radius * 2;
         Loading.start("Preloading " + total + " chunks");
         CompletableFuture<?>[] chunkFutures = new CompletableFuture[total];
